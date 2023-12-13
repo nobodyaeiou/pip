@@ -1,0 +1,194 @@
+SHOW DATABASES;
+#list db
+
+CREATE DATABASE test;
+#create db
+
+DROP DATABASE test;
+#delete db
+
+USE test;
+#use test db
+
+SHOW TABLES;
+#list tables
+
+text file looks like:
+1,John Doe,123 Main St#Anytown#CA#12345,555-1234#555-5678,age:30#gender:male
+2,Jane Smith,456 Elm St#Othertown#NY#54321,555-9876#555-4321,age:25#gender:female
+
+
+
+CREATE TABLE test.emp
+(
+eno INT, ename STRING, city STRING
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+STORED AS TEXTFILE;
+#create table
+
+LOAD DATA LOCAL INPATH '/Home/Downloads/data.txt' INTO TABLE emp
+#local to hive table
+
+LOAD DATA INPATH '/datasets/data.txt' INTO TABLE emp;
+#hdfs to hive table
+
+hdfs dfs -ls /user/hive/warehouse/test.db/emp;
+#display tables using hdfs
+
+CREATE TABLE test.emp_cm
+(
+id INT,
+name STRING,
+addr STRUCT<street: STRING,city: STRING,state: STRING,zip: INT>,
+phone ARRAY<STRING>,
+properties MAP<STRING, STRING>
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+COLLECTION ITEMS TERMINATED BY '#'
+MAP KEYS TERMINATED BY ':'
+LINES TERMINATED BY '\n'
+STORED AS TEXTFILE;
+#create complex tables
+
+
+SELECT * FROM emp_cm;
+#display data of table
+
+<---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------->
+
+
+input data looks like:
+1,100,1,ProductA,1,10,26-03-2023
+2,101,2,ProductB,2,20,20-03-2023
+
+CREATE TABLE sales_db.sales
+(
+oid INT,
+cid INT,
+pid INT,
+pname STRING,
+quantity INT,
+price DOUBLE,
+odate STRING
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE;
+#table format for csv file
+
+LOAD DATA LOCAL INPATH '/Home/Downloads/sales_data.csv' INTO TABLE sales
+#local to hive table
+
+SELECT COUNT(DISTINCT oid) AS torders 
+FROM sales_db.sales;
+#total no of orders in ds
+
+SELECT SUM(quantity*price) AS trevenue 
+FROM sales_db.sales;
+#total revenue from the sales
+
+SELECT * 
+FROM sales_db.sales
+WHERE quantity>5;
+#select product sold more than 5 quantity
+
+SELECT pid,pname,price
+FROM sales_db.sales
+ORDER BY price DESC
+LIMIT 1;
+#highest priced product
+
+SELECT pid,pname,SUM(quantity*price) AS trevenue
+FROM sales_db.sales
+GROUP BY pid,pname;
+#group data by product name and calculate total revenue for each product
+
+SELECT pid,pname,SUM(quantity) AS tqsold
+FROM sales_db.sales
+FROUP BY pid,pname
+ORDER BY price DESC
+LIMIT 1;
+#top selling product by quantity
+
+
+SELECT oid, cid, pid, pname, quantity, price,
+CAST (odate  AS DATE) AS odate
+FROM sales_db.sales;
+#edit column date
+
+
+SELECT 
+YEAR(odate) AS oyear
+MONTH(odate) AS omonth
+SUM(quantity*price) AS trevenue
+FROM sales_db.sales
+GROUP BY YEAR(odate),MONTH(odate)
+ORDER BY oyear,omonth;
+#revenue per month
+
+
+SELECT 
+YEAR(odate) AS oyear
+MONTH(odate) AS omonth
+SUM(quantity*price) AS trevenue
+FROM sales_db.sales
+GROUP BY YEAR(odate),MONTH(odate)
+ORDER BY trevenue DESC
+LIMIT 1;
+# month with highest revenue
+
+CREATE TABLE sales_db.partitioned_sales
+(
+order_id INT,
+customer_id INT,
+product_id INT,
+product_name STRING, quantity INT,
+price DOUBLE
+)
+PARTITIONED BY (order_year INT);
+
+
+
+INSERT OVERWRITE TABLE sales_db.partitioned_sales
+SELECT order_id,customer_id,product_id, product_name, quantity, price, YEAR(order_date) AS order_year
+FROM sales_db.sales;
+
+
+
+SELECT product_id, product_name, SUM(quantity) AS total_quantity
+FROM sales_db.sales
+GROUP BY product_id, product_name
+HAVING SUM(quantity)>(SELECT AVG(quantity)
+FROM(
+SELECT SUM(quantity) AS quantity
+FROM sales_db.sales
+GROUP BY product_id
+)
+avg_sales
+ );
+
+
+
+SELECT product_id, product_name, order_date,
+SUM(quantity* price) over (PARTITION BY product_id ORDER BY order_date) 
+AS cumulative_revenue
+FROM sales_db.sales;
+
+
+
+SELECT product_id, product_name, SUM(quantity price) AS total_revenue,
+RANK() OVER (ORDER BY SUM(quantity * price) DESC) AS sales_performance_rank
+FROM sales_db.sales
+GROUP BY product_id, product_name
+ORDER BY total_revenue DESC
+LIMIT 5;
+
+
+
+
+
+

@@ -1,0 +1,23 @@
+wr = LOAD '/temp.txt' USING PigStorage(',') AS (date:chararray,temp:int);
+
+
+DESCRIBE wr;
+
+
+swr = FOREACH wr GENERATE FLATTEN (STRSPLIT(date,'-')) AS (day:chararray,month:chararray,year:chararray), temp;
+
+
+rwr = FOREACH swr GENERATE year,temp;
+
+
+gwr = GROUP rwr BY year;
+
+
+max_temp = FOREACH gwr GENERATE GROUP AS year, MAX(rwr.temp) AS htemp;
+
+
+DESCRIBE htemp;
+
+
+DUMP max_temp;
+

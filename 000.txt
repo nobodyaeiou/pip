@@ -1,0 +1,25 @@
+hdfs dfs -ls /
+#display files
+
+hdfs dfs -mkdir /testing/
+#create directory
+
+hdfs dfs -put Home/Downloads/sample.txt /testing/
+hdfs dfs -copyFromLocal Home/Downloads/sample.txt /testing/
+#copy from system to hdfs
+
+hdfs dfs  -get /testing/sample.txt Home/Downloads/
+hdfs dfs  -copyToLocal /testing/sample.txt Home/Downloads/
+#copy from hdfs to system
+
+hdfs dfs -cat /testing/sample.txt
+hdfs dfs -tail /testing/sample.txt
+#display contetnt
+
+hdfs dfs -rm /testing/sample.txt
+#delete file
+
+hdfs dfs -rm -r /testing
+#delete folder
+
+
